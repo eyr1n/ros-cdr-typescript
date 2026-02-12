@@ -1,0 +1,20 @@
+{
+  "name": "@eyr1n/ros-cdr-examples",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "talker": "node dist/src/talker.js",
+    "listener": "node dist/src/listener.js",
+    "add-two-ints": "node dist/src/addTwoInts.js"
+  },
+  "dependencies": {
+    "@eyr1n/ros-cdr-client": "workspace:*",
+    "@eyr1n/ros-cdr-serialization": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "typescript": "^5.9.3"
+  }
+}
