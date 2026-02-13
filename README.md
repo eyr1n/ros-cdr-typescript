@@ -1,6 +1,6 @@
 # ros-cdr-typescript
 
-TypeScript client and CDR serialization utilities for `ros_cdr_bridge`.
+TypeScript client and CDR serialization utilities for [ros_cdr_bridge](https://github.com/eyr1n/ros_cdr_bridge).
 
 This repository provides:
 
@@ -12,7 +12,7 @@ This repository provides:
 
 - Node.js 22+
 - pnpm 10+
-- A running `ros_cdr_bridge` server (default: `ws://127.0.0.1:9090`)
+- A running [ros_cdr_bridge](https://github.com/eyr1n/ros_cdr_bridge) server (default: `ws://127.0.0.1:9090`)
 
 ## Install
 
