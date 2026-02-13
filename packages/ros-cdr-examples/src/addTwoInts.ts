@@ -19,6 +19,7 @@ ws.onopen = async () => {
   const id = await client.createServiceClient(
     '/add_two_ints',
     AddTwoIntsRequest.type,
+    {},
   );
   const request = ros.serialize(AddTwoIntsRequest, { a: 2n, b: 3n });
   const response = await client.callService(id, request);

@@ -14,6 +14,7 @@ ws.onopen = async () => {
   const id = await client.createSubscription(
     '/chatter',
     std_msgs_String.type,
+    {},
     (message) => {
       const deserialized = ros.deserialize(std_msgs_String, message);
       console.log(`I heard: [${deserialized.data}]`);

@@ -11,7 +11,7 @@ const ws = new WebSocket(url);
 const client = new RosCdrClient(ws);
 
 ws.onopen = async () => {
-  const id = await client.createPublisher('/chatter', std_msgs_String.type);
+  const id = await client.createPublisher('/chatter', std_msgs_String.type, {});
 
   let count = 0;
   setInterval(() => {

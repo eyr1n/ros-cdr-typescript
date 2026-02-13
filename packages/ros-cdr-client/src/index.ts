@@ -19,11 +19,77 @@ export type PublisherId = Branded<number, 'PublisherId'>;
 export type SubscriptionId = Branded<number, 'SubscriptionId'>;
 export type ServiceClientId = Branded<number, 'ServiceClientId'>;
 
+export const QosBaseProfile = {
+  SENSOR_DATA: 'SENSOR_DATA',
+  PARAMETERS: 'PARAMETERS',
+  DEFAULT: 'DEFAULT',
+  SERVICES_DEFAULT: 'SERVICES_DEFAULT',
+  PARAMETER_EVENTS: 'PARAMETER_EVENTS',
+  SYSTEM_DEFAULT: 'SYSTEM_DEFAULT',
+  BEST_AVAILABLE: 'BEST_AVAILABLE',
+} as const;
+export type QosBaseProfile =
+  (typeof QosBaseProfile)[keyof typeof QosBaseProfile];
+
+export const QosHistoryPolicy = {
+  SYSTEM_DEFAULT: 'SYSTEM_DEFAULT',
+  KEEP_LAST: 'KEEP_LAST',
+  KEEP_ALL: 'KEEP_ALL',
+} as const;
+export type QosHistoryPolicy =
+  (typeof QosHistoryPolicy)[keyof typeof QosHistoryPolicy];
+
+export const QosReliabilityPolicy = {
+  SYSTEM_DEFAULT: 'SYSTEM_DEFAULT',
+  RELIABLE: 'RELIABLE',
+  BEST_EFFORT: 'BEST_EFFORT',
+  BEST_AVAILABLE: 'BEST_AVAILABLE',
+} as const;
+export type QosReliabilityPolicy =
+  (typeof QosReliabilityPolicy)[keyof typeof QosReliabilityPolicy];
+
+export const QosDurabilityPolicy = {
+  SYSTEM_DEFAULT: 'SYSTEM_DEFAULT',
+  TRANSIENT_LOCAL: 'TRANSIENT_LOCAL',
+  VOLATILE: 'VOLATILE',
+  BEST_AVAILABLE: 'BEST_AVAILABLE',
+} as const;
+export type QosDurabilityPolicy =
+  (typeof QosDurabilityPolicy)[keyof typeof QosDurabilityPolicy];
+
+export const QosLivelinessPolicy = {
+  SYSTEM_DEFAULT: 'SYSTEM_DEFAULT',
+  AUTOMATIC: 'AUTOMATIC',
+  MANUAL_BY_TOPIC: 'MANUAL_BY_TOPIC',
+  BEST_AVAILABLE: 'BEST_AVAILABLE',
+} as const;
+export type QosLivelinessPolicy =
+  (typeof QosLivelinessPolicy)[keyof typeof QosLivelinessPolicy];
+
+export interface RmwTime {
+  sec: number;
+  nsec: number;
+}
+
+export interface QosProfile {
+  profile?: QosBaseProfile;
+  history?: QosHistoryPolicy;
+  depth?: number;
+  reliability?: QosReliabilityPolicy;
+  durability?: QosDurabilityPolicy;
+  deadline?: RmwTime;
+  lifespan?: RmwTime;
+  liveliness?: QosLivelinessPolicy;
+  livelinessLeaseDuration?: RmwTime;
+  avoidRosNamespaceConventions?: boolean;
+}
+
 interface CreateRequest {
   callId: number;
   op: CreateOp;
   name: string;
   type: string;
+  qos: QosProfile;
 }
 
 interface CreateResponse {
@@ -118,12 +184,17 @@ export class RosCdrClient {
     this.#ws.onmessage = this.#onMessage.bind(this);
   }
 
-  async createPublisher(name: string, type: string): Promise<PublisherId> {
+  async createPublisher(
+    name: string,
+    type: string,
+    qos: QosProfile,
+  ): Promise<PublisherId> {
     const request: CreateRequest = {
       callId: this.#callId++,
       op: OP_CREATE_PUBLISHER,
       name,
       type,
+      qos,
     };
     return this.#sendCreateRequest(request) as Promise<PublisherId>;
   }
@@ -131,6 +202,7 @@ export class RosCdrClient {
   async createSubscription(
     name: string,
     type: string,
+    qos: QosProfile,
     callback: (message: DataView) => void,
   ): Promise<SubscriptionId> {
     const request: CreateRequest = {
@@ -138,6 +210,7 @@ export class RosCdrClient {
       op: OP_CREATE_SUBSCRIPTION,
       name,
       type,
+      qos,
     };
     const id = await (this.#sendCreateRequest(
       request,
@@ -149,12 +222,14 @@ export class RosCdrClient {
   async createServiceClient(
     name: string,
     type: string,
+    qos: QosProfile,
   ): Promise<ServiceClientId> {
     const request: CreateRequest = {
       callId: this.#callId++,
       op: OP_CREATE_SERVICE_CLIENT,
       name,
       type,
+      qos,
     };
     return this.#sendCreateRequest(request) as Promise<ServiceClientId>;
   }
