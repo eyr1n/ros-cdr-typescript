@@ -21,7 +21,7 @@ ws.onopen = async () => {
     AddTwoIntsRequest.type,
   );
   const request = ros.serialize(AddTwoIntsRequest, { a: 2n, b: 3n });
-  const response = await client.callService(id, 1, request);
+  const response = await client.callService(id, request);
   const deserialized = ros.deserialize(AddTwoIntsResponse, response);
   console.log(`Result of add_two_ints: ${deserialized.sum}`);
   client.destroy(id);

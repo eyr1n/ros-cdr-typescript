@@ -20,15 +20,15 @@ export type SubscriptionId = Branded<number, 'SubscriptionId'>;
 export type ServiceClientId = Branded<number, 'ServiceClientId'>;
 
 interface CreateRequest {
+  callId: number;
   op: CreateOp;
   name: string;
   type: string;
 }
 
 interface CreateResponse {
-  op: CreateOp;
-  name: string;
   id: number;
+  callId: number;
 }
 
 interface DestroyRequest {
@@ -49,18 +49,6 @@ interface ServiceClientResponse {
   message: DataView;
 }
 
-function isObject(value: unknown): value is object {
-  return value !== null && typeof value === 'object';
-}
-
-function isCreateOp(value: unknown): value is CreateOp {
-  return (
-    value === OP_CREATE_PUBLISHER ||
-    value === OP_CREATE_SUBSCRIPTION ||
-    value === OP_CREATE_SERVICE_CLIENT
-  );
-}
-
 function parseTextPayload(payload: string): CreateResponse | null {
   let response: unknown;
   try {
@@ -68,19 +56,19 @@ function parseTextPayload(payload: string): CreateResponse | null {
   } catch {
     return null;
   }
-  if (!isObject(response)) {
-    return null;
-  }
-  if (!('op' in response) || !isCreateOp(response.op)) {
-    return null;
-  }
-  if (!('name' in response) || typeof response.name !== 'string') {
+  if (response === null || typeof response !== 'object') {
     return null;
   }
   if (!('id' in response) || typeof response.id !== 'number') {
     return null;
   }
-  return { op: response.op, name: response.name, id: response.id };
+  if (!('callId' in response) || typeof response.callId !== 'number') {
+    return null;
+  }
+  return {
+    id: response.id,
+    callId: response.callId,
+  };
 }
 
 function parseBinaryPayload(
@@ -113,23 +101,16 @@ function parseBinaryPayload(
   return null;
 }
 
-function pendingCreateKey(op: CreateOp, name: string): string {
-  return `${op}:${name}`;
-}
-
-function serviceResponseKey(id: number, callId: number): string {
-  return `${id}:${callId}`;
-}
-
 export class RosCdrClient {
   readonly #ws: WebSocket;
 
-  readonly #pendingCreates = new Map<string, (id: number) => void>();
+  readonly #pendingCreates = new Map<number, (id: number) => void>();
   readonly #subscriptions = new Map<
     SubscriptionId,
     (message: DataView) => void
   >();
-  readonly #serviceResponses = new Map<string, (response: DataView) => void>();
+  readonly #serviceResponses = new Map<number, (response: DataView) => void>();
+  #callId = 0;
 
   constructor(ws: WebSocket) {
     this.#ws = ws;
@@ -138,7 +119,12 @@ export class RosCdrClient {
   }
 
   async createPublisher(name: string, type: string): Promise<PublisherId> {
-    const request: CreateRequest = { op: OP_CREATE_PUBLISHER, name, type };
+    const request: CreateRequest = {
+      callId: this.#callId++,
+      op: OP_CREATE_PUBLISHER,
+      name,
+      type,
+    };
     return this.#sendCreateRequest(request) as Promise<PublisherId>;
   }
 
@@ -147,7 +133,12 @@ export class RosCdrClient {
     type: string,
     callback: (message: DataView) => void,
   ): Promise<SubscriptionId> {
-    const request: CreateRequest = { op: OP_CREATE_SUBSCRIPTION, name, type };
+    const request: CreateRequest = {
+      callId: this.#callId++,
+      op: OP_CREATE_SUBSCRIPTION,
+      name,
+      type,
+    };
     const id = await (this.#sendCreateRequest(
       request,
     ) as Promise<SubscriptionId>);
@@ -159,7 +150,12 @@ export class RosCdrClient {
     name: string,
     type: string,
   ): Promise<ServiceClientId> {
-    const request: CreateRequest = { op: OP_CREATE_SERVICE_CLIENT, name, type };
+    const request: CreateRequest = {
+      callId: this.#callId++,
+      op: OP_CREATE_SERVICE_CLIENT,
+      name,
+      type,
+    };
     return this.#sendCreateRequest(request) as Promise<ServiceClientId>;
   }
 
@@ -172,11 +168,8 @@ export class RosCdrClient {
     this.#sendBinaryPayload(payload);
   }
 
-  callService(
-    id: ServiceClientId,
-    callId: number,
-    request: Uint8Array,
-  ): Promise<DataView> {
+  callService(id: ServiceClientId, request: Uint8Array): Promise<DataView> {
+    const callId = this.#callId++;
     const payload = new Uint8Array(1 + 4 + 4 + request.length);
     payload[0] = OP_SERVICE_REQUEST;
     const view = new DataView(payload.buffer);
@@ -184,9 +177,8 @@ export class RosCdrClient {
     view.setUint32(5, callId, true);
     payload.set(request, 9);
 
-    const key = serviceResponseKey(id, callId);
     return new Promise((resolve) => {
-      this.#serviceResponses.set(key, resolve);
+      this.#serviceResponses.set(callId, resolve);
       this.#sendBinaryPayload(payload);
     });
   }
@@ -199,10 +191,7 @@ export class RosCdrClient {
 
   #sendCreateRequest(request: CreateRequest): Promise<number> {
     return new Promise((resolve) => {
-      this.#pendingCreates.set(
-        pendingCreateKey(request.op, request.name),
-        resolve,
-      );
+      this.#pendingCreates.set(request.callId, resolve);
       this.#sendTextPayload(request);
     });
   }
@@ -231,10 +220,9 @@ export class RosCdrClient {
     if (!response) {
       return;
     }
-    const key = pendingCreateKey(response.op, response.name);
-    const callback = this.#pendingCreates.get(key);
+    const callback = this.#pendingCreates.get(response.callId);
     if (callback) {
-      this.#pendingCreates.delete(key);
+      this.#pendingCreates.delete(response.callId);
       callback(response.id);
     }
   }
@@ -249,10 +237,9 @@ export class RosCdrClient {
       return;
     }
     if (message.opcode === OP_SERVICE_RESPONSE) {
-      const key = serviceResponseKey(message.id, message.callId);
-      const callback = this.#serviceResponses.get(key);
+      const callback = this.#serviceResponses.get(message.callId);
       if (callback) {
-        this.#serviceResponses.delete(key);
+        this.#serviceResponses.delete(message.callId);
         callback(message.message);
       }
       return;
