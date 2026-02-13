@@ -1,75 +1,49 @@
 const brand = Symbol();
 type Branded<T, Brand> = T & { [brand]: Brand };
 
-const OP_CREATE_SUBSCRIPTION = 'create_subscription' as const;
-const OP_CREATE_PUBLISHER = 'create_publisher' as const;
-const OP_CREATE_SERVICE_CLIENT = 'create_service_client' as const;
-const OP_DESTROY = 'destroy' as const;
-
-const OP_TOPIC = 1 as const;
-const OP_SERVICE_REQUEST = 2 as const;
-const OP_SERVICE_RESPONSE = 3 as const;
-
-type CreateOp =
-  | typeof OP_CREATE_PUBLISHER
-  | typeof OP_CREATE_SUBSCRIPTION
-  | typeof OP_CREATE_SERVICE_CLIENT;
+const OP_TOPIC = 0 as const;
+const OP_SERVICE_REQUEST = 1 as const;
+const OP_SERVICE_RESPONSE = 2 as const;
 
 export type PublisherId = Branded<number, 'PublisherId'>;
 export type SubscriptionId = Branded<number, 'SubscriptionId'>;
 export type ServiceClientId = Branded<number, 'ServiceClientId'>;
 
-export const QosBaseProfile = {
-  SENSOR_DATA: 'SENSOR_DATA',
-  PARAMETERS: 'PARAMETERS',
-  DEFAULT: 'DEFAULT',
-  SERVICES_DEFAULT: 'SERVICES_DEFAULT',
-  PARAMETER_EVENTS: 'PARAMETER_EVENTS',
-  SYSTEM_DEFAULT: 'SYSTEM_DEFAULT',
-  BEST_AVAILABLE: 'BEST_AVAILABLE',
-} as const;
 export type QosBaseProfile =
-  (typeof QosBaseProfile)[keyof typeof QosBaseProfile];
+  | 'sensor_data'
+  | 'parameters'
+  | 'default'
+  | 'services_default'
+  | 'parameter_events'
+  | 'system_default'
+  | 'best_available';
 
-export const QosHistoryPolicy = {
-  SYSTEM_DEFAULT: 'SYSTEM_DEFAULT',
-  KEEP_LAST: 'KEEP_LAST',
-  KEEP_ALL: 'KEEP_ALL',
-} as const;
-export type QosHistoryPolicy =
-  (typeof QosHistoryPolicy)[keyof typeof QosHistoryPolicy];
+export type QosHistoryPolicy = 'system_default' | 'keep_last' | 'keep_all';
 
-export const QosReliabilityPolicy = {
-  SYSTEM_DEFAULT: 'SYSTEM_DEFAULT',
-  RELIABLE: 'RELIABLE',
-  BEST_EFFORT: 'BEST_EFFORT',
-  BEST_AVAILABLE: 'BEST_AVAILABLE',
-} as const;
 export type QosReliabilityPolicy =
-  (typeof QosReliabilityPolicy)[keyof typeof QosReliabilityPolicy];
+  | 'system_default'
+  | 'reliable'
+  | 'best_effort'
+  | 'best_available';
 
-export const QosDurabilityPolicy = {
-  SYSTEM_DEFAULT: 'SYSTEM_DEFAULT',
-  TRANSIENT_LOCAL: 'TRANSIENT_LOCAL',
-  VOLATILE: 'VOLATILE',
-  BEST_AVAILABLE: 'BEST_AVAILABLE',
-} as const;
 export type QosDurabilityPolicy =
-  (typeof QosDurabilityPolicy)[keyof typeof QosDurabilityPolicy];
+  | 'system_default'
+  | 'transient_local'
+  | 'volatile'
+  | 'best_available';
 
-export const QosLivelinessPolicy = {
-  SYSTEM_DEFAULT: 'SYSTEM_DEFAULT',
-  AUTOMATIC: 'AUTOMATIC',
-  MANUAL_BY_TOPIC: 'MANUAL_BY_TOPIC',
-  BEST_AVAILABLE: 'BEST_AVAILABLE',
-} as const;
 export type QosLivelinessPolicy =
-  (typeof QosLivelinessPolicy)[keyof typeof QosLivelinessPolicy];
+  | 'system_default'
+  | 'automatic'
+  | 'manual_by_topic'
+  | 'best_available';
 
-export interface RmwTime {
-  sec: number;
-  nsec: number;
-}
+export type QosDuration =
+  | {
+      sec: number;
+      nsec: number;
+    }
+  | 'infinite';
 
 export interface QosProfile {
   profile?: QosBaseProfile;
@@ -77,16 +51,16 @@ export interface QosProfile {
   depth?: number;
   reliability?: QosReliabilityPolicy;
   durability?: QosDurabilityPolicy;
-  deadline?: RmwTime;
-  lifespan?: RmwTime;
+  deadline?: QosDuration;
+  lifespan?: QosDuration;
   liveliness?: QosLivelinessPolicy;
-  livelinessLeaseDuration?: RmwTime;
-  avoidRosNamespaceConventions?: boolean;
+  liveliness_lease_duration?: QosDuration;
+  avoid_ros_namespace_conventions?: boolean;
 }
 
 interface CreateRequest {
-  callId: number;
-  op: CreateOp;
+  call_id: number;
+  op: 'create_publisher' | 'create_subscription' | 'create_service_client';
   name: string;
   type: string;
   qos: QosProfile;
@@ -94,11 +68,11 @@ interface CreateRequest {
 
 interface CreateResponse {
   id: number;
-  callId: number;
+  call_id: number;
 }
 
 interface DestroyRequest {
-  op: typeof OP_DESTROY;
+  op: 'destroy';
   id: PublisherId | SubscriptionId | ServiceClientId;
 }
 
@@ -110,8 +84,7 @@ interface SubscriptionMessage {
 
 interface ServiceClientResponse {
   opcode: typeof OP_SERVICE_RESPONSE;
-  id: number;
-  callId: number;
+  call_id: number;
   message: DataView;
 }
 
@@ -128,12 +101,12 @@ function parseTextPayload(payload: string): CreateResponse | null {
   if (!('id' in response) || typeof response.id !== 'number') {
     return null;
   }
-  if (!('callId' in response) || typeof response.callId !== 'number') {
+  if (!('call_id' in response) || typeof response.call_id !== 'number') {
     return null;
   }
   return {
     id: response.id,
-    callId: response.callId,
+    call_id: response.call_id,
   };
 }
 
@@ -152,31 +125,22 @@ function parseBinaryPayload(
     return { opcode: OP_TOPIC, id, message: new DataView(buffer, 5) };
   }
   if (opcode === OP_SERVICE_RESPONSE) {
-    if (view.byteLength < 9) {
-      return null;
-    }
-    const id = view.getUint32(1, true);
-    const callId = view.getUint32(5, true);
+    const call_id = view.getUint32(1, true);
     return {
       opcode: OP_SERVICE_RESPONSE,
-      id,
-      callId,
-      message: new DataView(buffer, 9),
+      call_id,
+      message: new DataView(buffer, 5),
     };
   }
   return null;
 }
 
 export class RosCdrClient {
-  readonly #ws: WebSocket;
-
-  readonly #pendingCreates = new Map<number, (id: number) => void>();
-  readonly #subscriptions = new Map<
-    SubscriptionId,
-    (message: DataView) => void
-  >();
-  readonly #serviceResponses = new Map<number, (response: DataView) => void>();
-  #callId = 0;
+  #ws: WebSocket;
+  #pendingCreates = new Map<number, (id: number) => void>();
+  #subscriptions = new Map<SubscriptionId, (message: DataView) => void>();
+  #serviceResponses = new Map<number, (response: DataView) => void>();
+  #nextCallId = 0;
 
   constructor(ws: WebSocket) {
     this.#ws = ws;
@@ -190,8 +154,8 @@ export class RosCdrClient {
     qos: QosProfile,
   ): Promise<PublisherId> {
     const request: CreateRequest = {
-      callId: this.#callId++,
-      op: OP_CREATE_PUBLISHER,
+      call_id: this.#nextCallId++,
+      op: 'create_publisher',
       name,
       type,
       qos,
@@ -206,8 +170,8 @@ export class RosCdrClient {
     callback: (message: DataView) => void,
   ): Promise<SubscriptionId> {
     const request: CreateRequest = {
-      callId: this.#callId++,
-      op: OP_CREATE_SUBSCRIPTION,
+      call_id: this.#nextCallId++,
+      op: 'create_subscription',
       name,
       type,
       qos,
@@ -225,8 +189,8 @@ export class RosCdrClient {
     qos: QosProfile,
   ): Promise<ServiceClientId> {
     const request: CreateRequest = {
-      callId: this.#callId++,
-      op: OP_CREATE_SERVICE_CLIENT,
+      call_id: this.#nextCallId++,
+      op: 'create_service_client',
       name,
       type,
       qos,
@@ -244,29 +208,29 @@ export class RosCdrClient {
   }
 
   callService(id: ServiceClientId, request: Uint8Array): Promise<DataView> {
-    const callId = this.#callId++;
+    const call_id = this.#nextCallId++;
     const payload = new Uint8Array(1 + 4 + 4 + request.length);
     payload[0] = OP_SERVICE_REQUEST;
     const view = new DataView(payload.buffer);
     view.setUint32(1, id, true);
-    view.setUint32(5, callId, true);
+    view.setUint32(5, call_id, true);
     payload.set(request, 9);
 
     return new Promise((resolve) => {
-      this.#serviceResponses.set(callId, resolve);
+      this.#serviceResponses.set(call_id, resolve);
       this.#sendBinaryPayload(payload);
     });
   }
 
   destroy(id: PublisherId | SubscriptionId | ServiceClientId) {
-    const request: DestroyRequest = { op: OP_DESTROY, id };
+    const request: DestroyRequest = { op: 'destroy', id };
     this.#sendTextPayload(request);
     this.#subscriptions.delete(id as SubscriptionId);
   }
 
   #sendCreateRequest(request: CreateRequest): Promise<number> {
     return new Promise((resolve) => {
-      this.#pendingCreates.set(request.callId, resolve);
+      this.#pendingCreates.set(request.call_id, resolve);
       this.#sendTextPayload(request);
     });
   }
@@ -295,9 +259,9 @@ export class RosCdrClient {
     if (!response) {
       return;
     }
-    const callback = this.#pendingCreates.get(response.callId);
+    const callback = this.#pendingCreates.get(response.call_id);
     if (callback) {
-      this.#pendingCreates.delete(response.callId);
+      this.#pendingCreates.delete(response.call_id);
       callback(response.id);
     }
   }
@@ -312,9 +276,9 @@ export class RosCdrClient {
       return;
     }
     if (message.opcode === OP_SERVICE_RESPONSE) {
-      const callback = this.#serviceResponses.get(message.callId);
+      const callback = this.#serviceResponses.get(message.call_id);
       if (callback) {
-        this.#serviceResponses.delete(message.callId);
+        this.#serviceResponses.delete(message.call_id);
         callback(message.message);
       }
       return;
