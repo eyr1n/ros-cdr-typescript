@@ -1,3 +1,5 @@
+import type WebSocket from 'isomorphic-ws';
+
 const brand = Symbol();
 type Branded<T, Brand> = T & { [brand]: Brand };
 
@@ -285,7 +287,7 @@ export class RosCdrClient {
     this.#ws.send(payload);
   }
 
-  #onMessage(event: MessageEvent) {
+  #onMessage(event: MessageEvent<unknown>) {
     if (typeof event.data === 'string') {
       this.#onTextPayload(event.data);
       return;

@@ -1,6 +1,6 @@
 {
   "name": "@eyr1n/ros-cdr-client",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "type": "module",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
@@ -21,6 +21,9 @@
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public"
+  },
+  "dependencies": {
+    "isomorphic-ws": "^5.0.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
