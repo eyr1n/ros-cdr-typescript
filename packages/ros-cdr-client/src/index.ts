@@ -1,5 +1,3 @@
-import type WebSocket from 'isomorphic-ws';
-
 const brand = Symbol();
 type Branded<T, Brand> = T & { [brand]: Brand };
 
