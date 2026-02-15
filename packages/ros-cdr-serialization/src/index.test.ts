@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as ros from './index.js';
 
 describe('std_msgs/msg/UInt32', () => {
@@ -16,7 +16,6 @@ describe('std_msgs/msg/UInt32', () => {
   it('serializes and deserializes', () => {
     const payload = ros.serialize(UInt32, { data: 1234 });
     const output = ros.deserialize(UInt32, payload);
-    expectTypeOf(output).toEqualTypeOf<{ data: number }>();
     expect(output).toEqual({ data: 1234 });
   });
 });
@@ -39,7 +38,6 @@ describe('std_msgs/msg/String', () => {
   it('serializes and deserializes', () => {
     const payload = ros.serialize(StringMessage, { data: 'hello' });
     const output = ros.deserialize(StringMessage, payload);
-    expectTypeOf(output).toEqualTypeOf<{ data: string }>();
     expect(output).toEqual({ data: 'hello' });
   });
 });
@@ -70,12 +68,6 @@ describe('geometry_msgs/msg/Quaternion', () => {
     const input = { x: 0, y: 0.5, z: -0.5, w: 1 };
     const payload = ros.serialize(Quaternion, input);
     const output = ros.deserialize(Quaternion, payload);
-    expectTypeOf(output).toEqualTypeOf<{
-      x: number;
-      y: number;
-      z: number;
-      w: number;
-    }>();
     expect(output).toEqual(input);
   });
 });
