@@ -12,7 +12,7 @@ This repository provides:
 
 - Node.js 22+
 - pnpm 10+
-- A running [ros_cdr_bridge](https://github.com/eyr1n/ros_cdr_bridge) server (default: `ws://127.0.0.1:9090`)
+- A running [ros_cdr_bridge](https://github.com/eyr1n/ros_cdr_bridge) server (default: `ws://127.0.0.1:54321`)
 
 ## Install
 
@@ -43,5 +43,5 @@ pnpm --filter @eyr1n/ros-cdr-examples add-two-ints
 To use a non-default bridge endpoint:
 
 ```bash
-pnpm --filter @eyr1n/ros-cdr-examples talker -- ws://127.0.0.1:8766
+pnpm --filter @eyr1n/ros-cdr-examples talker -- ws://127.0.0.1:54322
 ```

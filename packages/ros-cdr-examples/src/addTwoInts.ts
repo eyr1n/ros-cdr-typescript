@@ -1,7 +1,7 @@
 import { RosCdrClient } from '@eyr1n/ros-cdr-client';
 import * as ros from '@eyr1n/ros-cdr-serialization';
 
-const url = process.argv[2] ?? 'ws://127.0.0.1:9090';
+const url = process.argv[2] ?? 'ws://127.0.0.1:54321';
 
 const AddTwoIntsRequest = ros.message('example_interfaces/srv/AddTwoInts', {
   a: ros.int64(),
