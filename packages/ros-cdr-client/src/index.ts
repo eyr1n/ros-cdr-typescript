@@ -152,6 +152,7 @@ export class RosCdrClient {
     name: string,
     type: string,
     qos: QosProfile,
+    options?: { signal?: AbortSignal },
   ): Promise<PublisherId> {
     const request: CreateRequest = {
       call_id: this.#nextCallId++,
@@ -160,7 +161,7 @@ export class RosCdrClient {
       type,
       qos,
     };
-    return this.#sendCreateRequest(request) as Promise<PublisherId>;
+    return this.#sendCreateRequest(request, options) as Promise<PublisherId>;
   }
 
   async createSubscription(
@@ -168,6 +169,7 @@ export class RosCdrClient {
     type: string,
     qos: QosProfile,
     callback: (message: DataView) => void,
+    options?: { signal?: AbortSignal },
   ): Promise<SubscriptionId> {
     const request: CreateRequest = {
       call_id: this.#nextCallId++,
@@ -178,6 +180,7 @@ export class RosCdrClient {
     };
     const id = await (this.#sendCreateRequest(
       request,
+      options,
     ) as Promise<SubscriptionId>);
     this.#subscriptions.set(id, callback);
     return id;
@@ -187,6 +190,7 @@ export class RosCdrClient {
     name: string,
     type: string,
     qos: QosProfile,
+    options?: { signal?: AbortSignal },
   ): Promise<ServiceClientId> {
     const request: CreateRequest = {
       call_id: this.#nextCallId++,
@@ -195,7 +199,10 @@ export class RosCdrClient {
       type,
       qos,
     };
-    return this.#sendCreateRequest(request) as Promise<ServiceClientId>;
+    return this.#sendCreateRequest(
+      request,
+      options,
+    ) as Promise<ServiceClientId>;
   }
 
   publish(id: PublisherId, message: Uint8Array) {
@@ -207,17 +214,35 @@ export class RosCdrClient {
     this.#sendBinaryPayload(payload);
   }
 
-  callService(id: ServiceClientId, request: Uint8Array): Promise<DataView> {
-    const call_id = this.#nextCallId++;
+  callService(
+    id: ServiceClientId,
+    request: Uint8Array,
+    options?: { signal?: AbortSignal },
+  ): Promise<DataView> {
+    if (options?.signal?.aborted) {
+      return Promise.reject(options.signal.reason);
+    }
+
+    const callId = this.#nextCallId++;
     const payload = new Uint8Array(1 + 4 + 4 + request.length);
     payload[0] = OP_SERVICE_REQUEST;
     const view = new DataView(payload.buffer);
     view.setUint32(1, id, true);
-    view.setUint32(5, call_id, true);
+    view.setUint32(5, callId, true);
     payload.set(request, 9);
 
-    return new Promise((resolve) => {
-      this.#serviceResponses.set(call_id, resolve);
+    return new Promise((resolve, reject) => {
+      const onAbort = () => {
+        if (this.#serviceResponses.delete(callId)) {
+          reject(options?.signal?.reason);
+        }
+      };
+
+      options?.signal?.addEventListener('abort', onAbort, { once: true });
+      this.#serviceResponses.set(callId, (response) => {
+        options?.signal?.removeEventListener('abort', onAbort);
+        resolve(response);
+      });
       this.#sendBinaryPayload(payload);
     });
   }
@@ -228,9 +253,26 @@ export class RosCdrClient {
     this.#subscriptions.delete(id as SubscriptionId);
   }
 
-  #sendCreateRequest(request: CreateRequest): Promise<number> {
-    return new Promise((resolve) => {
-      this.#pendingCreates.set(request.call_id, resolve);
+  #sendCreateRequest(
+    request: CreateRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<number> {
+    if (options?.signal?.aborted) {
+      return Promise.reject(options.signal.reason);
+    }
+
+    return new Promise((resolve, reject) => {
+      const onAbort = () => {
+        if (this.#pendingCreates.delete(request.call_id)) {
+          reject(options?.signal?.reason);
+        }
+      };
+
+      options?.signal?.addEventListener('abort', onAbort, { once: true });
+      this.#pendingCreates.set(request.call_id, (id: number) => {
+        options?.signal?.removeEventListener('abort', onAbort);
+        resolve(id);
+      });
       this.#sendTextPayload(request);
     });
   }
