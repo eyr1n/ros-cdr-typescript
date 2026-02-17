@@ -174,13 +174,11 @@ export class RosMessageSchema<
 > extends RosSchema<InferMessageShape<Shape>> {
   #type: string;
   #shape: Shape;
-  #entries: [string, RosSchema][];
 
   constructor(type: string, shape: Shape) {
     super();
     this.#type = type;
     this.#shape = shape;
-    this.#entries = Object.entries(this.#shape);
   }
 
   get type(): string {
@@ -188,26 +186,37 @@ export class RosMessageSchema<
   }
 
   protected read(reader: CdrReader): InferMessageShape<Shape> {
-    if (this.#entries.length === 0) {
+    const entries = Object.entries(this.#shape);
+    if (entries.length === 0) {
       reader.uint8();
       return {} as InferMessageShape<Shape>;
     }
     const output: { [key: string]: unknown } = {};
-    for (const [key, schema] of this.#entries) {
+    for (const [key, schema] of entries) {
       output[key] = schema._read(reader);
     }
     return output as InferMessageShape<Shape>;
   }
 
   protected write(writer: CdrWriter, input: InferMessageShape<Shape>): void {
-    if (this.#entries.length === 0) {
+    const entries = Object.entries(this.#shape);
+    if (entries.length === 0) {
       writer.uint8(0);
       return;
     }
-    for (const [key, schema] of this.#entries) {
+    for (const [key, schema] of entries) {
       schema._write(writer, input[key]);
     }
   }
+}
+
+export interface RosServiceSchema<
+  RequestShape extends RosMessageShape = RosMessageShape,
+  ResponseShape extends RosMessageShape = RosMessageShape,
+> {
+  type: string;
+  request: RosMessageSchema<RequestShape>;
+  response: RosMessageSchema<ResponseShape>;
 }
 
 function primitiveFactory<Type extends RosPrimitiveType>(
@@ -239,11 +248,28 @@ export function array<Schema extends RosSchema>(
   return new RosArraySchema(schema, length);
 }
 
-export function message<Type extends string, Shape extends RosMessageShape>(
-  type: Type,
+export function message<Shape extends RosMessageShape>(
+  type: string,
   shape: Shape,
 ): RosMessageSchema<Shape> {
   return new RosMessageSchema(type, shape);
+}
+
+export function service<
+  RequestShape extends RosMessageShape,
+  ResponseShape extends RosMessageShape,
+>(
+  type: string,
+  shape: {
+    request: RequestShape;
+    response: ResponseShape;
+  },
+): RosServiceSchema<RequestShape, ResponseShape> {
+  return {
+    type,
+    request: new RosMessageSchema(`${type}_Request`, shape.request),
+    response: new RosMessageSchema(`${type}_Response`, shape.response),
+  };
 }
 
 export function serialize<Schema extends RosMessageSchema>(
