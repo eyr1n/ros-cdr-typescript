@@ -243,7 +243,12 @@ export class RosCdrClient {
         options?.signal?.removeEventListener('abort', onAbort);
         resolve(response);
       });
-      this.#sendBinaryPayload(payload);
+
+      try {
+        this.#sendBinaryPayload(payload);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
@@ -273,7 +278,12 @@ export class RosCdrClient {
         options?.signal?.removeEventListener('abort', onAbort);
         resolve(id);
       });
-      this.#sendTextPayload(request);
+
+      try {
+        this.#sendTextPayload(request);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
