@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@eyr1n/ros-cdr-client": "workspace:*",
-    "@eyr1n/ros-cdr-serialization": "workspace:*"
+    "@eyr1n/ros-cdr-serialization": "workspace:*",
+    "@eyr1n/ros-cdr-typegen": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

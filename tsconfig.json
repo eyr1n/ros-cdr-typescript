@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/ros-cdr-client" },
     { "path": "./packages/ros-cdr-serialization" },
+    { "path": "./packages/ros-cdr-typegen" },
     { "path": "./packages/ros-cdr-examples" }
   ]
 }

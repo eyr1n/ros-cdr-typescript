@@ -29,6 +29,9 @@ importers:
       '@eyr1n/ros-cdr-serialization':
         specifier: workspace:*
         version: link:../ros-cdr-serialization
+      '@eyr1n/ros-cdr-typegen':
+        specifier: workspace:*
+        version: link:../ros-cdr-typegen
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -49,6 +52,28 @@ importers:
       vitest:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@25.2.3)
+
+  packages/ros-cdr-typegen:
+    dependencies:
+      '@foxglove/message-definition':
+        specifier: ^0.5.0
+        version: 0.5.0
+      '@foxglove/rosmsg':
+        specifier: ^5.0.5
+        version: 5.0.5
+      tmp-promise:
+        specifier: ^3.0.3
+        version: 3.0.3
+      valibot:
+        specifier: ^1.2.0
+        version: 1.2.0(typescript@5.9.3)
+    devDependencies:
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.2.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
 packages:
 
@@ -267,6 +292,13 @@ packages:
 
   '@foxglove/cdr@3.5.0':
     resolution: {integrity: sha512-trj8uB+J71SuW9g8TbbDgTbvqrmUHQjh5uhqBAraBhg4hxm7aG9AFPvz34yJ/XZnl28x0NuLjptJYKNSUlgM9Q==}
+    engines: {node: '>= 14'}
+
+  '@foxglove/message-definition@0.5.0':
+    resolution: {integrity: sha512-B/2GvWn4wRSsPDywcmy6uNXgAfZRhiOAnmy3qAaS6MHVqiHQqs/RoDsoW6Gw9sXSweJpeH5qAqAihvm1pR9Thg==}
+
+  '@foxglove/rosmsg@5.0.5':
+    resolution: {integrity: sha512-+qY6xW+4HdbPI3ItAlFFMjXgAiplXyRsv+kqdBk8OcWGH38BmEd7s6v/VnCkbYovAoB5rfR5giuKfmPRNzwbrA==}
     engines: {node: '>= 14'}
 
   '@jridgewell/sourcemap-codec@1.5.5':
@@ -494,6 +526,9 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
+  md5-typescript@1.0.5:
+    resolution: {integrity: sha512-ovAc4EtiNt2dY8JPhPr/wkC9h4U5k/nuClNVcG0Ga3V1rMlYpAY24ZaaymFXJlz+ccJ6UMPo3FSaVKe7czBsXw==}
+
   nanoid@3.3.11:
     resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -549,6 +584,13 @@ packages:
     resolution: {integrity: sha512-PSkbLUoxOFRzJYjjxHJt9xro7D+iilgMX/C9lawzVuYiIdcihh9DXmVibBe8lmcFrRi/VzlPjBxbN7rH24q8/Q==}
     engines: {node: '>=14.0.0'}
 
+  tmp-promise@3.0.3:
+    resolution: {integrity: sha512-RwM7MoPojPxsOBYnyd2hy0bxtIlVrihNs9pj5SUvY8Zz1sQcQG2tG1hSr8PDxfgEB8RNKDhqbIlroIarSNDNsQ==}
+
+  tmp@0.2.5:
+    resolution: {integrity: sha512-voyz6MApa1rQGUxT3E+BK7/ROe8itEx7vD8/HEvt4xwXucvQ5G5oeEiHkmHZJuBO21RpOf+YYm9MOivj709jow==}
+    engines: {node: '>=14.14'}
+
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
@@ -556,6 +598,14 @@ packages:
 
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
+
+  valibot@1.2.0:
+    resolution: {integrity: sha512-mm1rxUsmOxzrwnX5arGS+U4T25RdvpPjPN4yR0u9pUBov9+zGVtO84tif1eY4r6zWxVxu3KzIyknJy3rxfRZZg==}
+    peerDependencies:
+      typescript: '>=5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   vite@7.3.1:
     resolution: {integrity: sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==}
@@ -753,6 +803,13 @@ snapshots:
 
   '@foxglove/cdr@3.5.0': {}
 
+  '@foxglove/message-definition@0.5.0': {}
+
+  '@foxglove/rosmsg@5.0.5':
+    dependencies:
+      '@foxglove/message-definition': 0.5.0
+      md5-typescript: 1.0.5
+
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
   '@rollup/rollup-android-arm-eabi@4.57.1':
@@ -936,6 +993,8 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  md5-typescript@1.0.5: {}
+
   nanoid@3.3.11: {}
 
   obug@2.1.1: {}
@@ -1002,9 +1061,19 @@ snapshots:
 
   tinyrainbow@3.0.3: {}
 
+  tmp-promise@3.0.3:
+    dependencies:
+      tmp: 0.2.5
+
+  tmp@0.2.5: {}
+
   typescript@5.9.3: {}
 
   undici-types@7.16.0: {}
+
+  valibot@1.2.0(typescript@5.9.3):
+    optionalDependencies:
+      typescript: 5.9.3
 
   vite@7.3.1(@types/node@25.2.3):
     dependencies:
