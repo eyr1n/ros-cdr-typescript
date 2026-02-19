@@ -219,10 +219,6 @@ export class RosCdrClient {
     request: Uint8Array,
     options?: { signal?: AbortSignal },
   ): Promise<DataView> {
-    if (options?.signal?.aborted) {
-      return Promise.reject(options.signal.reason);
-    }
-
     const callId = this.#nextCallId++;
     const payload = new Uint8Array(1 + 4 + 4 + request.length);
     payload[0] = OP_SERVICE_REQUEST;
@@ -232,17 +228,27 @@ export class RosCdrClient {
     payload.set(request, 9);
 
     return new Promise((resolve, reject) => {
-      const onAbort = () => {
-        if (this.#serviceResponses.delete(callId)) {
-          reject(options?.signal?.reason);
+      const signal = options?.signal;
+      if (signal) {
+        const onAbort = () => {
+          signal.removeEventListener('abort', onAbort);
+          this.#serviceResponses.delete(callId);
+          reject(signal.reason);
+        };
+        signal.addEventListener('abort', onAbort, { once: true });
+        if (signal.aborted) {
+          onAbort();
+          return;
         }
-      };
-
-      options?.signal?.addEventListener('abort', onAbort, { once: true });
-      this.#serviceResponses.set(callId, (response) => {
-        options?.signal?.removeEventListener('abort', onAbort);
-        resolve(response);
-      });
+        this.#serviceResponses.set(callId, (response) => {
+          signal.removeEventListener('abort', onAbort);
+          resolve(response);
+        });
+      } else {
+        this.#serviceResponses.set(callId, (response) => {
+          resolve(response);
+        });
+      }
       this.#sendBinaryPayload(payload);
     });
   }
@@ -257,22 +263,28 @@ export class RosCdrClient {
     request: CreateRequest,
     options?: { signal?: AbortSignal },
   ): Promise<number> {
-    if (options?.signal?.aborted) {
-      return Promise.reject(options.signal.reason);
-    }
-
     return new Promise((resolve, reject) => {
-      const onAbort = () => {
-        if (this.#pendingCreates.delete(request.call_id)) {
-          reject(options?.signal?.reason);
+      const signal = options?.signal;
+      if (signal) {
+        const onAbort = () => {
+          signal.removeEventListener('abort', onAbort);
+          this.#pendingCreates.delete(request.call_id);
+          reject(signal.reason);
+        };
+        signal.addEventListener('abort', onAbort, { once: true });
+        if (signal.aborted) {
+          onAbort();
+          return;
         }
-      };
-
-      options?.signal?.addEventListener('abort', onAbort, { once: true });
-      this.#pendingCreates.set(request.call_id, (id: number) => {
-        options?.signal?.removeEventListener('abort', onAbort);
-        resolve(id);
-      });
+        this.#pendingCreates.set(request.call_id, (id) => {
+          signal.removeEventListener('abort', onAbort);
+          resolve(id);
+        });
+      } else {
+        this.#pendingCreates.set(request.call_id, (id) => {
+          resolve(id);
+        });
+      }
       this.#sendTextPayload(request);
     });
   }
